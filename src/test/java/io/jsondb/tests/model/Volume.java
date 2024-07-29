@@ -27,36 +27,44 @@ import io.jsondb.annotation.Id;
  * A test Pojo representing a AWS EC3 Volume
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "volumes", schemaVersion= "1.0")
+@Document(collection = "volumes", schemaVersion = "1.0")
 public class Volume {
-  @Id
-  private String id;
-  private String name;
-  private long size;
-  public boolean flash;
-  
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public String getName() {
-    return name;
-  }
-  public void setName(String name) {
-    this.name = name;
-  }
-  public long getSize() {
-    return size;
-  }
-  public void setSize(long size) {
-    this.size = size;
-  }
-  public boolean isFlash() {
-    return flash;
-  }
-  public void setFlash(boolean flash) {
-    this.flash = flash;
-  }
+    @Id
+    private String id;
+
+    private String name;
+    private long size;
+    public boolean flash;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public void setSize(long size) {
+        this.size = size;
+    }
+
+    public boolean isFlash() {
+        return flash;
+    }
+
+    public void setFlash(boolean flash) {
+        this.flash = flash;
+    }
 }

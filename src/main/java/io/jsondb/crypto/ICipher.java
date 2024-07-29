@@ -25,7 +25,7 @@ package io.jsondb.crypto;
  * @version 1.0 25-Sep-2016
  */
 public interface ICipher {
-  String encrypt(String plainText);
-  String decrypt(String cipherText);
-}
+    String encrypt(String plainText);
 
+    String decrypt(String cipherText);
+}

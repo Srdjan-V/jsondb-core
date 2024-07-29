@@ -32,6 +32,5 @@ import java.lang.annotation.Target;
  * @version 1.0 25-Sep-2016
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(value = { FIELD, METHOD, ANNOTATION_TYPE })
-public @interface Id {
-}
+@Target(value = {FIELD, METHOD, ANNOTATION_TYPE})
+public @interface Id {}

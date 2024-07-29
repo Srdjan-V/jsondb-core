@@ -31,8 +31,9 @@ import java.lang.annotation.Target;
  */
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE })
+@Target({ElementType.TYPE})
 public @interface Document {
-  String collection();
-  String schemaVersion();
+    String collection();
+
+    String schemaVersion();
 }

@@ -24,87 +24,84 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-import java.io.File;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import com.google.common.io.Files;
-
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.tests.model.Instance;
+import java.io.File;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * @version 1.0 14-Oct-2016
  */
 public class FindByIdTests {
-  private String dbFilesLocation = "src/test/resources/dbfiles/findByIdTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
+    private String dbFilesLocation = "src/test/resources/dbfiles/findByIdTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
 
-  private JsonDBTemplate jsonDBTemplate = null;
+    private JsonDBTemplate jsonDBTemplate = null;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
 
-  @Before
-  public void setUp() throws Exception {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
-  }
+    @Before
+    public void setUp() throws Exception {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+        ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
+        jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
+    }
 
-  @After
-  public void tearDown() throws Exception {
-    Util.delete(dbFilesFolder);
-  }
+    @After
+    public void tearDown() throws Exception {
+        Util.delete(dbFilesFolder);
+    }
 
-  /**
-   * test to find a document with a existing id.
-   */
-  @Test
-  public void testFindById_ForExistingId() {
-    Instance instance = jsonDBTemplate.findById("01", Instance.class);
-    assertNotNull(instance);
-    assertEquals(instance.getId(), "01");
-  }
+    /**
+     * test to find a document with a existing id.
+     */
+    @Test
+    public void testFindById_ForExistingId() {
+        Instance instance = jsonDBTemplate.findById("01", Instance.class);
+        assertNotNull(instance);
+        assertEquals(instance.getId(), "01");
+    }
 
-  /**
-   * test to find a document with a non-existent id.
-   */
-  @Test
-  public void testFindById_ForNonExistentId() {
-    Instance instance = jsonDBTemplate.findById("00", Instance.class);
-    assertNull(instance);
-  }
+    /**
+     * test to find a document with a non-existent id.
+     */
+    @Test
+    public void testFindById_ForNonExistentId() {
+        Instance instance = jsonDBTemplate.findById("00", Instance.class);
+        assertNull(instance);
+    }
 
-  private class NonAnotatedClass {}
+    private class NonAnotatedClass {}
 
-  /**
-   * test to find a document formEntity type which does not have @Document annotation
-   */
-  @Test
-  public void testFindById_NonAnotatedClass() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Entity 'NonAnotatedClass' is not annotated with annotation @Document");
-    jsonDBTemplate.findById("000000", NonAnotatedClass.class);
-  }
+    /**
+     * test to find a document formEntity type which does not have @Document annotation
+     */
+    @Test
+    public void testFindById_NonAnotatedClass() {
+        expectedException.expect(InvalidJsonDbApiUsageException.class);
+        expectedException.expectMessage("Entity 'NonAnotatedClass' is not annotated with annotation @Document");
+        jsonDBTemplate.findById("000000", NonAnotatedClass.class);
+    }
 
-  /**
-   * test to find a document for a unknown collection name
-   */
-  @Test
-  public void testFindById_UnknownCollectionName() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Collection by name 'SomeCollection' not found. Create collection first");
-    jsonDBTemplate.findById("000000", "SomeCollection");
-  }
+    /**
+     * test to find a document for a unknown collection name
+     */
+    @Test
+    public void testFindById_UnknownCollectionName() {
+        expectedException.expect(InvalidJsonDbApiUsageException.class);
+        expectedException.expectMessage("Collection by name 'SomeCollection' not found. Create collection first");
+        jsonDBTemplate.findById("000000", "SomeCollection");
+    }
 }

@@ -26,41 +26,49 @@ import io.jsondb.annotation.Id;
 /**
  * @version 1.0 25-Oct-2016
  */
-@Document(collection = "loadbalancer", schemaVersion= "1.0")
+@Document(collection = "loadbalancer", schemaVersion = "1.0")
 public class LoadBalancer {
-  @Id
-  private String id;
-  private String hostname;
-  private String username;
+    @Id
+    private String id;
 
-  //New Field
-  private String osName;
+    private String hostname;
+    private String username;
 
-  //Just mentioned here so that is known that such a thing can happen
-  //private int deletedField;
+    // New Field
+    private String osName;
 
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public String getHostname() {
-    return hostname;
-  }
-  public void setHostname(String hostname) {
-    this.hostname = hostname;
-  }
-  public String getUsername() {
-    return username;
-  }
-  public void setUsername(String username) {
-    this.username = username;
-  }
-  public String getOsName() {
-    return osName;
-  }
-  public void setOsName(String osName) {
-    this.osName = osName;
-  }
+    // Just mentioned here so that is known that such a thing can happen
+    // private int deletedField;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getOsName() {
+        return osName;
+    }
+
+    public void setOsName(String osName) {
+        this.osName = osName;
+    }
 }

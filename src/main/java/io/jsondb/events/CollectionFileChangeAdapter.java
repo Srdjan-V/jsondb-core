@@ -35,13 +35,12 @@ package io.jsondb.events;
  */
 public abstract class CollectionFileChangeAdapter implements CollectionFileChangeListener {
 
-  @Override
-  public void collectionFileAdded(String collectionName) {  }
+    @Override
+    public void collectionFileAdded(String collectionName) {}
 
-  @Override
-  public void collectionFileDeleted(String collectionName) {  }
+    @Override
+    public void collectionFileDeleted(String collectionName) {}
 
-  @Override
-  public void collectionFileModified(String collectionName) {  }
-
+    @Override
+    public void collectionFileModified(String collectionName) {}
 }

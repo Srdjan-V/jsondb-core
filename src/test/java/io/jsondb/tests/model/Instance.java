@@ -28,38 +28,47 @@ import io.jsondb.annotation.Secret;
  * A test Pojo representing a AWS Instance.
  * @version 1.0 28-Sep-2016
  */
-@Document(collection = "instances", schemaVersion= "1.0")
+@Document(collection = "instances", schemaVersion = "1.0")
 public class Instance {
-  @Id
-  private String id;
-  private String hostname;
+    @Id
+    private String id;
 
-  @Secret
-  private String privateKey;
-  private String publicKey;
+    private String hostname;
 
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public String getHostname() {
-    return hostname;
-  }
-  public void setHostname(String hostname) {
-    this.hostname = hostname;
-  }
-  public String getPrivateKey() {
-    return privateKey;
-  }
-  public void setPrivateKey(String privateKey) {
-    this.privateKey = privateKey;
-  }
-  public String getPublicKey() {
-    return publicKey;
-  }
-  public void setPublicKey(String publicKey) {
-    this.publicKey = publicKey;
-  }
+    @Secret
+    private String privateKey;
+
+    private String publicKey;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
+    }
+
+    public String getPrivateKey() {
+        return privateKey;
+    }
+
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+    }
 }

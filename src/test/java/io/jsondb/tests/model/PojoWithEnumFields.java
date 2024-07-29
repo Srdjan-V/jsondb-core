@@ -30,27 +30,33 @@ import io.jsondb.annotation.Id;
  * @author Farooq Khan
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "pojowithenumfields", schemaVersion= "1.0")
+@Document(collection = "pojowithenumfields", schemaVersion = "1.0")
 public class PojoWithEnumFields {
-  public enum Status {
-    CREATED, COMPLETED, CONSUMED, UPDATED
-  }
+    public enum Status {
+        CREATED,
+        COMPLETED,
+        CONSUMED,
+        UPDATED
+    }
 
-  @Id
-  private String id;
-  private Status status;
+    @Id
+    private String id;
 
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public Status getStatus() {
-    return status;
-  }
-  public void setStatus(Status status) {
-    this.status = status;
-  }
+    private Status status;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public Status getStatus() {
+        return status;
+    }
+
+    public void setStatus(Status status) {
+        this.status = status;
+    }
 }
-

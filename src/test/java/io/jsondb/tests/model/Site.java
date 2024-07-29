@@ -28,21 +28,26 @@ import io.jsondb.annotation.Id;
  * Used to test JsonDB - createCollection() and dropCollection() operations
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "sites", schemaVersion= "1.0")
+@Document(collection = "sites", schemaVersion = "1.0")
 public class Site {
-  @Id
-  private String id;
-  private String location;
-  public String getId() {
-    return id;
-  }
-  public void setId(String id) {
-    this.id = id;
-  }
-  public String getLocation() {
-    return location;
-  }
-  public void setLocation(String location) {
-    this.location = location;
-  }
+    @Id
+    private String id;
+
+    private String location;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
 }

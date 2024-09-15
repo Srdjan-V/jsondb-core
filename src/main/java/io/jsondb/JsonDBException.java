@@ -20,14 +20,10 @@
  */
 package io.jsondb;
 
-import java.io.Serial;
-
 /**
  * @version 1.0 06-Oct-2016
  */
 public class JsonDBException extends RuntimeException {
-
-    @Serial
     private static final long serialVersionUID = -1397228179744504376L;
 
     public JsonDBException(String msg) {

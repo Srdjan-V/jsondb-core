@@ -20,14 +20,11 @@
  */
 package io.jsondb;
 
-import java.io.Serial;
-
 /**
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
  */
 public class InvalidJsonDbApiUsageException extends RuntimeException {
-    @Serial
     private static final long serialVersionUID = 5146122546986827377L;
 
     public InvalidJsonDbApiUsageException(String msg) {

@@ -20,13 +20,11 @@
  */
 plugins {
     id('com.palantir.git-version') version '3.1.0'
-    id('idea')
-    id('maven-publish')
+    id('com.diffplug.spotless') version '6.25.0'
 
-    //build src
-    id("java-conventions")
-    id("jebel-conventions")
-    id("spotless-conventions")
+    id('idea')
+    id('java')
+    id('maven-publish')
 }
 
 description = 'A pure java JSON based database.'
@@ -35,6 +33,14 @@ version = versionDetails().lastTag
 
 ext {
     println "Build Version: $version"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+    withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -61,3 +67,31 @@ dependencies {
     testImplementation 'org.springframework:spring-beans:6.1.10'
     testImplementation 'org.springframework:spring-test:6.1.10'
 }
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+spotless {
+    format 'misc', {
+        // define the files to apply `misc` to
+        target '*.gradle', '.gitattributes', '.gitignore'
+
+        // define the steps to apply to those files
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
+    }
+    java {
+        removeUnusedImports()
+        formatAnnotations()
+        palantirJavaFormat()
+    }
+}
+tasks.named("assemble", {
+    dependsOn tasks.named("spotlessApply")
+})

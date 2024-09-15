@@ -40,21 +40,21 @@ import org.reflections.Reflections;
  * @version 1.0 25-Sep-2016
  */
 public class CollectionMetaData {
-    private String collectionName;
-    private String schemaVersion;
+    private final String collectionName;
+    private final String schemaVersion;
     private String actualSchemaVersion;
-    private Comparator<String> schemaComparator;
-    private Class<?> clazz;
+    private final Comparator<String> schemaComparator;
+    private final Class<?> clazz;
 
     private String idAnnotatedFieldName;
-    private Method idAnnotatedFieldGetterMethod;
-    private Method idAnnotatedFieldSetterMethod;
+    private final Method idAnnotatedFieldGetterMethod;
+    private final Method idAnnotatedFieldSetterMethod;
 
     private final ReentrantReadWriteLock collectionLock;
 
-    private List<String> secretAnnotatedFieldNames = new ArrayList<String>();
-    private Map<String, Method> getterMethodMap = new TreeMap<String, Method>();
-    private Map<String, Method> setterMethodMap = new TreeMap<String, Method>();
+    private final List<String> secretAnnotatedFieldNames = new ArrayList<>();
+    private final Map<String, Method> getterMethodMap = new TreeMap<>();
+    private final Map<String, Method> setterMethodMap = new TreeMap<>();
 
     private boolean hasSecret;
     private boolean readonly;

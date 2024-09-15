@@ -31,7 +31,7 @@ import io.jsondb.query.ddl.CollectionSchemaUpdate.Type;
  * @version 1.0 21 Aug 2016
  */
 public class RenameOperation extends AbstractOperation {
-    private String newName;
+    private final String newName;
 
     public RenameOperation(String newName) {
         this.operationType = Type.RENAME;

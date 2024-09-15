@@ -63,20 +63,19 @@ import org.slf4j.LoggerFactory;
  * @version 1.0 25-Sep-2016
  */
 public class JsonDBTemplate implements JsonDBOperations {
-    private Logger logger = LoggerFactory.getLogger(JsonDBTemplate.class);
+    private final Logger logger = LoggerFactory.getLogger(JsonDBTemplate.class);
 
     private JsonDBConfig dbConfig = null;
     private final boolean encrypted;
     private File lockFilesLocation;
-    private EventListenerList eventListenerList;
+    private final EventListenerList eventListenerList;
 
     private Map<String, CollectionMetaData> cmdMap;
-    private AtomicReference<Map<String, File>> fileObjectsRef =
-            new AtomicReference<Map<String, File>>(new ConcurrentHashMap<String, File>());
-    private AtomicReference<Map<String, Map<Object, ?>>> collectionsRef =
-            new AtomicReference<Map<String, Map<Object, ?>>>(new ConcurrentHashMap<String, Map<Object, ?>>());
-    private AtomicReference<Map<String, JXPathContext>> contextsRef =
-            new AtomicReference<Map<String, JXPathContext>>(new ConcurrentHashMap<String, JXPathContext>());
+    private final AtomicReference<Map<String, File>> fileObjectsRef = new AtomicReference<>(new ConcurrentHashMap<>());
+    private final AtomicReference<Map<String, Map<Object, ?>>> collectionsRef =
+            new AtomicReference<>(new ConcurrentHashMap<>());
+    private final AtomicReference<Map<String, JXPathContext>> contextsRef =
+            new AtomicReference<>(new ConcurrentHashMap<>());
 
     public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage) {
         this(dbFilesLocationString, baseScanPackage, null, false, null);
@@ -122,7 +121,10 @@ public class JsonDBTemplate implements JsonDBOperations {
             try {
                 Files.createDirectory(dbConfig.getDbFilesPath());
             } catch (IOException e) {
-                logger.error("DbFiles directory does not exist. Failed to create a new empty DBFiles directory {}", e);
+                logger.error(
+                        "DbFiles directory does not exist. Failed to create a new empty DBFiles directory {}",
+                        dbConfig.getDbFilesPath(),
+                        e);
                 throw new InvalidJsonDbApiUsageException(
                         "DbFiles directory does not exist. Failed to create a new empty DBFiles directory "
                                 + dbConfig.getDbFilesLocationString());
@@ -208,14 +210,11 @@ public class JsonDBTemplate implements JsonDBOperations {
         Class<T> entity = cmd.getClazz();
         Method getterMethodForId = cmd.getIdAnnotatedFieldGetterMethod();
 
-        JsonReader jr = null;
         Map<Object, T> collection = new LinkedHashMap<Object, T>();
 
         String line = null;
         int lineNo = 1;
-        try {
-            jr = new JsonReader(dbConfig, collectionFile);
-
+        try (JsonReader jr = new JsonReader(dbConfig, collectionFile); ) {
             while ((line = jr.readLine()) != null) {
                 if (lineNo == 1) {
                     SchemaVersion v = dbConfig.getObjectMapper().readValue(line, SchemaVersion.class);
@@ -255,12 +254,8 @@ public class JsonDBTemplate implements JsonDBOperations {
             logger.error("Some IO Exception reading the Json File {}", collectionFile.getName(), e);
             return null;
         } catch (Throwable t) {
-            logger.error("Throwable Caught {}, {} ", collectionFile.getName(), t);
+            logger.error("Throwable Caught Collection {}", collectionFile.getName(), t);
             return null;
-        } finally {
-            if (null != jr) {
-                jr.close();
-            }
         }
         return collection;
     }
@@ -418,31 +413,26 @@ public class JsonDBTemplate implements JsonDBOperations {
                     RenameOperation op = updateEntry.getValue();
                     String newKey = op.getNewName();
 
-                    JsonWriter jw;
-                    try {
-                        jw = new JsonWriter(
-                                dbConfig,
-                                cmd,
-                                collectionName,
-                                fileObjectsRef.get().get(collectionName));
+                    try (JsonWriter jw = new JsonWriter(
+                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                        jw.renameKeyInJsonFile(collection.values(), true, oldKey, newKey);
                     } catch (IOException ioe) {
-                        logger.error("Failed to obtain writer for " + collectionName, ioe);
+                        logger.error("Failed to save {}", collectionName, ioe);
                         throw new JsonDBException("Failed to save " + collectionName, ioe);
                     }
-                    jw.renameKeyInJsonFile(collection.values(), true, oldKey, newKey);
                 }
                 cmd.getCollectionLock().writeLock().unlock();
             }
 
             Map<String, AddOperation> addOps = update.getAddOperations();
-            if (addOps.size() > 0) {
+            if (!addOps.isEmpty()) {
                 reloadCollectionAsSomethingChanged = true;
                 cmd.getCollectionLock().writeLock().lock();
 
                 for (Entry<String, AddOperation> updateEntry : addOps.entrySet()) {
                     AddOperation op = updateEntry.getValue();
 
-                    Object value = null;
+                    Object value;
                     if (op.isSecret()) {
                         value = dbConfig.getCipher().encrypt((String) op.getDefaultValue());
                     } else {
@@ -456,15 +446,13 @@ public class JsonDBTemplate implements JsonDBOperations {
                     }
                 }
 
-                JsonWriter jw;
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                    jw.reWriteJsonFile(collection.values(), true);
                 } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
+                    logger.error("Failed to save {}", collectionName, ioe);
                     throw new JsonDBException("Failed to save " + collectionName, ioe);
                 }
-                jw.reWriteJsonFile(collection.values(), true);
                 cmd.getCollectionLock().writeLock().unlock();
             }
 
@@ -477,15 +465,14 @@ public class JsonDBTemplate implements JsonDBOperations {
                 reloadCollectionAsSomethingChanged = true;
                 cmd.getCollectionLock().writeLock().lock();
 
-                JsonWriter jw;
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                    jw.reWriteJsonFile(collection.values(), true);
                 } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
+                    logger.error("Failed to save {}", collectionName, ioe);
                     throw new JsonDBException("Failed to save " + collectionName, ioe);
                 }
-                jw.reWriteJsonFile(collection.values(), true);
+
                 cmd.getCollectionLock().writeLock().unlock();
             }
             if (reloadCollectionAsSomethingChanged) {
@@ -527,7 +514,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         List<T> newCollection = new ArrayList<T>();
         try {
             for (T document : collection.values()) {
-                Object obj = Util.deepCopy(document);
+                Object obj = Util.deepCopy(dbConfig, document);
                 if (encrypted && cmd.hasSecret() && null != obj) {
                     CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
                 }
@@ -646,7 +633,7 @@ public class JsonDBTemplate implements JsonDBOperations {
                     // Since slicing is enabled we defer the deepcopy and decryption to later stage.
                     newCollection.add(document);
                 } else {
-                    Object obj = Util.deepCopy(document);
+                    Object obj = Util.deepCopy(dbConfig, document);
                     if (encrypted && cmd.hasSecret() && null != obj) {
                         CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
                     }
@@ -663,7 +650,7 @@ public class JsonDBTemplate implements JsonDBOperations {
                 if (indexes != null) {
                     List<T> slicedCollection = new ArrayList<T>(indexes.size());
                     for (int index : indexes) {
-                        Object obj = Util.deepCopy(newCollection.get(index));
+                        Object obj = Util.deepCopy(dbConfig, newCollection.get(index));
                         if (encrypted && cmd.hasSecret() && null != obj) {
                             CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
                         }
@@ -744,7 +731,7 @@ public class JsonDBTemplate implements JsonDBOperations {
                     // Since slicing is enabled we defer the deepcopy and decryption to later stage.
                     newCollection.add(document);
                 } else {
-                    T obj = (T) Util.deepCopy(document);
+                    T obj = (T) Util.deepCopy(dbConfig, document);
                     if (encrypted && cmd.hasSecret() && null != obj) {
                         CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
                     }
@@ -761,7 +748,7 @@ public class JsonDBTemplate implements JsonDBOperations {
                 if (indexes != null) {
                     List<T> slicedCollection = new ArrayList<T>(indexes.size());
                     for (int index : indexes) {
-                        Object obj = Util.deepCopy(newCollection.get(index));
+                        Object obj = Util.deepCopy(dbConfig, newCollection.get(index));
                         if (encrypted && cmd.hasSecret() && null != obj) {
                             CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
                         }
@@ -802,7 +789,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         }
         cmd.getCollectionLock().readLock().lock();
         try {
-            Object obj = Util.deepCopy(collection.get(id));
+            Object obj = Util.deepCopy(dbConfig, collection.get(id));
             if (encrypted && cmd.hasSecret() && null != obj) {
                 CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
             }
@@ -841,7 +828,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             Iterator<T> resultItr = context.iterate(jxQuery);
             while (resultItr.hasNext()) {
                 T document = resultItr.next();
-                Object obj = Util.deepCopy(document);
+                Object obj = Util.deepCopy(dbConfig, document);
                 if (encrypted && collectionMeta.hasSecret() && null != obj) {
                     CryptoUtil.decryptFields(obj, collectionMeta, dbConfig.getCipher());
                 }
@@ -879,7 +866,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             throw new InvalidJsonDbApiUsageException("Null Object cannot be inserted into DB");
         }
         Util.ensureNotRestricted(objectToSave);
-        Object objToSave = Util.deepCopy(objectToSave);
+        Object objToSave = Util.deepCopy(dbConfig, objectToSave);
         CollectionMetaData cmd = cmdMap.get(collectionName);
         cmd.getCollectionLock().writeLock().lock();
         try {
@@ -899,19 +886,15 @@ public class JsonDBTemplate implements JsonDBOperations {
                         "Object already present in Collection. Use Update or Upsert operation instead of Insert");
             }
 
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean appendResult = jw.appendToJsonFile(collection.values(), objToSave);
+                if (appendResult) {
+                    collection.put(Util.deepCopy(dbConfig, id), (T) objToSave);
+                }
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
-            }
-
-            boolean appendResult = jw.appendToJsonFile(collection.values(), objToSave);
-
-            if (appendResult) {
-                collection.put(Util.deepCopy(id), (T) objToSave);
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
@@ -951,7 +934,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             Set<Object> uniqueIds = new HashSet<Object>();
             Map<Object, T> newCollection = new LinkedHashMap<Object, T>();
             for (T o : batchToSave) {
-                Object obj = Util.deepCopy(o);
+                Object obj = Util.deepCopy(dbConfig, o);
                 Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
                 if (encrypted && cmd.hasSecret()) {
                     CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
@@ -966,21 +949,16 @@ public class JsonDBTemplate implements JsonDBOperations {
                     throw new InvalidJsonDbApiUsageException(
                             "Duplicate object with id: " + id + " within the passed in parameter");
                 }
-                newCollection.put(Util.deepCopy(id), (T) obj);
+                newCollection.put(Util.deepCopy(dbConfig, id), (T) obj);
             }
 
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean appendResult = jw.appendToJsonFile(collection.values(), newCollection.values());
+                if (appendResult) collection.putAll(newCollection);
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
-            }
-            boolean appendResult = jw.appendToJsonFile(collection.values(), newCollection.values());
-
-            if (appendResult) {
-                collection.putAll(newCollection);
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
@@ -1008,7 +986,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             throw new InvalidJsonDbApiUsageException("Null Object cannot be updated into DB");
         }
         Util.ensureNotRestricted(objectToSave);
-        Object objToSave = Util.deepCopy(objectToSave);
+        Object objToSave = Util.deepCopy(dbConfig, objectToSave);
         CollectionMetaData collectionMeta = cmdMap.get(collectionName);
         collectionMeta.getCollectionLock().writeLock().lock();
         try {
@@ -1031,20 +1009,19 @@ public class JsonDBTemplate implements JsonDBOperations {
             if (encrypted && cmd.hasSecret()) {
                 CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
             }
-            JsonWriter jw = null;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                //noinspection unchecked
+                boolean updateResult = jw.updateInJsonFile(collection, id, (T) objToSave);
+                if (updateResult) {
+                    @SuppressWarnings("unchecked")
+                    T newObject = (T) objToSave;
+                    collection.put(id, newObject);
+                }
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
-            }
-            @SuppressWarnings("unchecked")
-            boolean updateResult = jw.updateInJsonFile(collection, id, (T) objToSave);
-            if (updateResult) {
-                @SuppressWarnings("unchecked")
-                T newObject = (T) objToSave;
-                collection.put(id, newObject);
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
@@ -1098,21 +1075,19 @@ public class JsonDBTemplate implements JsonDBOperations {
                         String.format("Objects with Id %s not found in collection %s", id, collectionName));
             }
 
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean substractResult = jw.removeFromJsonFile(collection, id);
+                if (substractResult) {
+                    T objectRemoved = collection.remove(id);
+                    // Don't need to clone it, this object no more exists in the collection
+                    return objectRemoved;
+                } else {
+                    return null;
+                }
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
-            }
-            boolean substractResult = jw.removeFromJsonFile(collection, id);
-            if (substractResult) {
-                T objectRemoved = collection.remove(id);
-                // Don't need to clone it, this object no more exists in the collection
-                return objectRemoved;
-            } else {
-                return null;
             }
         } finally {
             collectionMeta.getCollectionLock().writeLock().unlock();
@@ -1145,7 +1120,7 @@ public class JsonDBTemplate implements JsonDBOperations {
                         "Collection by name '" + collectionName + "' not found. Create collection first.");
             }
 
-            Set<Object> removeIds = new HashSet<Object>();
+            Set<Object> removeIds = new HashSet<>();
 
             for (T o : batchToRemove) {
                 Object id = Util.getIdForEntity(o, cmd.getIdAnnotatedFieldGetterMethod());
@@ -1154,29 +1129,23 @@ public class JsonDBTemplate implements JsonDBOperations {
                 }
             }
 
-            if (removeIds.size() < 1) {
-                return null;
-            }
-
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            if (removeIds.isEmpty()) return null;
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
+                List<T> removedObjects = null;
+                if (substractResult) {
+                    removedObjects = new ArrayList<T>();
+                    for (Object id : removeIds) {
+                        // Don't need to clone it, this object no more exists in the collection
+                        removedObjects.add(collection.remove(id));
+                    }
+                }
+                return removedObjects;
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
             }
-            boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
-
-            List<T> removedObjects = null;
-            if (substractResult) {
-                removedObjects = new ArrayList<T>();
-                for (Object id : removeIds) {
-                    // Don't need to clone it, this object no more exists in the collection
-                    removedObjects.add(collection.remove(id));
-                }
-            }
-            return removedObjects;
         } finally {
             cmd.getCollectionLock().writeLock().unlock();
         }
@@ -1204,7 +1173,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             throw new InvalidJsonDbApiUsageException("Null Object cannot be upserted into DB");
         }
         Util.ensureNotRestricted(objectToSave);
-        Object objToSave = Util.deepCopy(objectToSave);
+        Object objToSave = Util.deepCopy(dbConfig, objectToSave);
         CollectionMetaData collectionMeta = cmdMap.get(collectionName);
         collectionMeta.getCollectionLock().writeLock().lock();
         try {
@@ -1226,26 +1195,21 @@ public class JsonDBTemplate implements JsonDBOperations {
                 insert = false;
             }
 
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                if (insert) {
+                    boolean insertResult = jw.appendToJsonFile(collection.values(), objToSave);
+                    if (insertResult) collection.put(Util.deepCopy(dbConfig, id), (T) objToSave);
+                } else {
+                    boolean updateResult = jw.updateInJsonFile(collection, id, (T) objToSave);
+                    if (updateResult) {
+                        T newObject = (T) objToSave;
+                        collection.put(id, newObject);
+                    }
+                }
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
-            }
-
-            if (insert) {
-                boolean insertResult = jw.appendToJsonFile(collection.values(), objToSave);
-                if (insertResult) {
-                    collection.put(Util.deepCopy(id), (T) objToSave);
-                }
-            } else {
-                boolean updateResult = jw.updateInJsonFile(collection, id, (T) objToSave);
-                if (updateResult) {
-                    T newObject = (T) objToSave;
-                    collection.put(id, newObject);
-                }
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
@@ -1288,7 +1252,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             Map<Object, T> collectionToUpdate = new LinkedHashMap<Object, T>();
 
             for (T o : batchToSave) {
-                Object obj = Util.deepCopy(o);
+                Object obj = Util.deepCopy(dbConfig, o);
                 Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
                 if (encrypted && cmd.hasSecret()) {
                     CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
@@ -1304,40 +1268,30 @@ public class JsonDBTemplate implements JsonDBOperations {
                             "Duplicate object with id: " + id + " within the passed in parameter");
                 }
                 if (insert) {
-                    collectionToInsert.put(Util.deepCopy(id), (T) obj);
+                    collectionToInsert.put(Util.deepCopy(dbConfig, id), (T) obj);
                 } else {
-                    collectionToUpdate.put(Util.deepCopy(id), (T) obj);
+                    collectionToUpdate.put(Util.deepCopy(dbConfig, id), (T) obj);
                 }
             }
 
-            JsonWriter jw;
-            if (collectionToInsert.size() > 0) {
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            if (!collectionToInsert.isEmpty()) {
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName)); ) {
+                    boolean insertResult = jw.appendToJsonFile(collection.values(), collectionToInsert.values());
+                    if (insertResult) collection.putAll(collectionToInsert);
                 } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
+                    logger.error("Failed to save {}", collectionName, ioe);
                     throw new JsonDBException("Failed to save " + collectionName, ioe);
-                }
-
-                boolean insertResult = jw.appendToJsonFile(collection.values(), collectionToInsert.values());
-                if (insertResult) {
-                    collection.putAll(collectionToInsert);
                 }
             }
-
-            if (collectionToUpdate.size() > 0) {
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            if (!collectionToUpdate.isEmpty()) {
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                    boolean updateResult = jw.updateInJsonFile(collection, collectionToUpdate);
+                    if (updateResult) collection.putAll(collectionToUpdate);
                 } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
+                    logger.error("Failed to save {}", collectionName, ioe);
                     throw new JsonDBException("Failed to save " + collectionName, ioe);
-                }
-
-                boolean updateResult = jw.updateInJsonFile(collection, collectionToUpdate);
-                if (updateResult) {
-                    collection.putAll(collectionToUpdate);
                 }
             }
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
@@ -1390,21 +1344,19 @@ public class JsonDBTemplate implements JsonDBOperations {
                             String.format("Objects with Id %s not found in collection %s", idToRemove, collectionName));
                 }
 
-                JsonWriter jw;
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                    boolean substractResult = jw.removeFromJsonFile(collection, idToRemove);
+                    if (substractResult) {
+                        T objectRemoved = collection.remove(idToRemove);
+                        // Don't need to clone it, this object no more exists in the collection
+                        return objectRemoved;
+                    } else {
+                        logger.error("Unexpected, Failed to substract the object");
+                    }
                 } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
+                    logger.error("Failed to save {}", collectionName, ioe);
                     throw new JsonDBException("Failed to save " + collectionName, ioe);
-                }
-                boolean substractResult = jw.removeFromJsonFile(collection, idToRemove);
-                if (substractResult) {
-                    T objectRemoved = collection.remove(idToRemove);
-                    // Don't need to clone it, this object no more exists in the collection
-                    return objectRemoved;
-                } else {
-                    logger.error("Unexpected, Failed to substract the object");
                 }
             }
             return null; // Either the jxQuery found nothing or actual FileIO failed to substract it.
@@ -1438,37 +1390,34 @@ public class JsonDBTemplate implements JsonDBOperations {
             JXPathContext context = contextsRef.get().get(collectionName);
             @SuppressWarnings("unchecked")
             Iterator<T> resultItr = context.iterate(jxQuery);
-            Set<Object> removeIds = new HashSet<Object>();
+            Set<Object> removeIds = new HashSet<>();
             while (resultItr.hasNext()) {
                 T objectToRemove = resultItr.next();
                 Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
                 removeIds.add(idToRemove);
             }
 
-            if (removeIds.size() < 1) {
+            if (removeIds.isEmpty()) {
                 return null;
             }
 
-            JsonWriter jw;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
+
+                List<T> removedObjects = null;
+                if (substractResult) {
+                    removedObjects = new ArrayList<T>();
+                    for (Object id : removeIds) {
+                        // Don't need to clone it, this object no more exists in the collection
+                        removedObjects.add(collection.remove(id));
+                    }
+                }
+                return removedObjects;
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
             }
-            boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
-
-            List<T> removedObjects = null;
-            if (substractResult) {
-                removedObjects = new ArrayList<T>();
-                for (Object id : removeIds) {
-                    // Don't need to clone it, this object no more exists in the collection
-                    removedObjects.add(collection.remove(id));
-                }
-            }
-            return removedObjects;
-
         } finally {
             cmd.getCollectionLock().writeLock().unlock();
         }
@@ -1507,9 +1456,9 @@ public class JsonDBTemplate implements JsonDBOperations {
             }
             if (null != objectToModify) {
                 // Clone it because we dont want to touch the in-memory object until we have really saved it
-                clonedModifiedObject = (T) Util.deepCopy(objectToModify);
+                clonedModifiedObject = (T) Util.deepCopy(dbConfig, objectToModify);
                 for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
-                    Object newValue = Util.deepCopy(entry.getValue());
+                    Object newValue = Util.deepCopy(dbConfig, entry.getValue());
                     if (encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())) {
                         newValue = dbConfig.getCipher().encrypt(newValue.toString());
                     }
@@ -1523,23 +1472,22 @@ public class JsonDBTemplate implements JsonDBOperations {
                 }
 
                 Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
-                JsonWriter jw = null;
-                try {
-                    jw = new JsonWriter(
-                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
-                } catch (IOException ioe) {
-                    logger.error("Failed to obtain writer for " + collectionName, ioe);
-                    throw new JsonDBException("Failed to save " + collectionName, ioe);
-                }
-                boolean updateResult = jw.updateInJsonFile(collection, idToModify, clonedModifiedObject);
-                if (updateResult) {
-                    collection.put(idToModify, clonedModifiedObject);
-                    // Clone it once more because we want to disconnect it from the in-memory objects before returning.
-                    T returnObj = (T) Util.deepCopy(clonedModifiedObject);
-                    if (encrypted && cmd.hasSecret() && null != returnObj) {
-                        CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
+                try (JsonWriter jw = new JsonWriter(
+                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName)); ) {
+                    boolean updateResult = jw.updateInJsonFile(collection, idToModify, clonedModifiedObject);
+                    if (updateResult) {
+                        collection.put(idToModify, clonedModifiedObject);
+                        // Clone it once more because we want to disconnect it from the in-memory objects before
+                        // returning.
+                        T returnObj = (T) Util.deepCopy(dbConfig, clonedModifiedObject);
+                        if (encrypted && cmd.hasSecret() && null != returnObj) {
+                            CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
+                        }
+                        return returnObj;
                     }
-                    return returnObj;
+                } catch (IOException ioe) {
+                    logger.error("Failed to save {}", collectionName, ioe);
+                    throw new JsonDBException("Failed to save " + collectionName, ioe);
                 }
             }
             return null;
@@ -1580,10 +1528,10 @@ public class JsonDBTemplate implements JsonDBOperations {
 
             while (resultItr.hasNext()) {
                 T objectToModify = resultItr.next();
-                T clonedModifiedObject = (T) Util.deepCopy(objectToModify);
+                T clonedModifiedObject = (T) Util.deepCopy(dbConfig, objectToModify);
 
                 for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
-                    Object newValue = Util.deepCopy(entry.getValue());
+                    Object newValue = Util.deepCopy(dbConfig, entry.getValue());
                     if (encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())) {
                         newValue = dbConfig.getCipher().encrypt(newValue.toString());
                     }
@@ -1599,30 +1547,29 @@ public class JsonDBTemplate implements JsonDBOperations {
                 clonedModifiedObjects.put(id, clonedModifiedObject);
             }
 
-            JsonWriter jw = null;
-            try {
-                jw = new JsonWriter(
-                        dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+            try (JsonWriter jw = new JsonWriter(
+                    dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                boolean updateResult = jw.updateInJsonFile(collection, clonedModifiedObjects);
+                if (updateResult) {
+                    collection.putAll(clonedModifiedObjects);
+                    // Clone it once more because we want to disconnect it from the in-memory objects before returning.
+                    List<T> returnObjects = new ArrayList<T>();
+                    for (T obj : clonedModifiedObjects.values()) {
+                        // Clone it once more because we want to disconnect it from the in-memory objects before
+                        // returning.
+                        T returnObj = (T) Util.deepCopy(dbConfig, obj);
+                        if (encrypted && cmd.hasSecret() && null != returnObj) {
+                            CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
+                        }
+                        returnObjects.add(returnObj);
+                    }
+                    return returnObjects;
+                }
+                return null;
             } catch (IOException ioe) {
-                logger.error("Failed to obtain writer for " + collectionName, ioe);
+                logger.error("Failed to save {}", collectionName, ioe);
                 throw new JsonDBException("Failed to save " + collectionName, ioe);
             }
-            boolean updateResult = jw.updateInJsonFile(collection, clonedModifiedObjects);
-            if (updateResult) {
-                collection.putAll(clonedModifiedObjects);
-                // Clone it once more because we want to disconnect it from the in-memory objects before returning.
-                List<T> returnObjects = new ArrayList<T>();
-                for (T obj : clonedModifiedObjects.values()) {
-                    // Clone it once more because we want to disconnect it from the in-memory objects before returning.
-                    T returnObj = (T) Util.deepCopy(obj);
-                    if (encrypted && cmd.hasSecret() && null != returnObj) {
-                        CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
-                    }
-                    returnObjects.add(returnObj);
-                }
-                return returnObjects;
-            }
-            return null;
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
             logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
             throw new JsonDBException(
@@ -1658,27 +1605,22 @@ public class JsonDBTemplate implements JsonDBOperations {
                 if (cmd.hasSecret()) {
                     Map<Object, T> reCryptedObjects = new LinkedHashMap<Object, T>();
                     for (Entry<Object, T> object : collection.entrySet()) {
-                        T clonedObject = (T) Util.deepCopy(object.getValue());
+                        T clonedObject = (T) Util.deepCopy(dbConfig, object.getValue());
                         CryptoUtil.decryptFields(clonedObject, cmd, dbConfig.getCipher());
                         CryptoUtil.encryptFields(clonedObject, cmd, newCipher);
                         // We will reuse the Id in the previous collection, should hopefully not cause any issues
                         reCryptedObjects.put(object.getKey(), clonedObject);
                     }
-                    JsonWriter jw = null;
-                    try {
-                        jw = new JsonWriter(
-                                dbConfig,
-                                cmd,
-                                collectionName,
-                                fileObjectsRef.get().get(collectionName));
+                    try (JsonWriter jw = new JsonWriter(
+                            dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName))) {
+                        boolean updateResult = jw.updateInJsonFile(collection, reCryptedObjects);
+                        if (!updateResult) {
+                            throw new JsonDBException(
+                                    "Failed to write re-crypted collection data to .json files, database might have become insconsistent");
+                        }
                     } catch (IOException ioe) {
-                        logger.error("Failed to obtain writer for " + collectionName, ioe);
+                        logger.error("Failed to save {}", collectionName, ioe);
                         throw new JsonDBException("Failed to save " + collectionName, ioe);
-                    }
-                    boolean updateResult = jw.updateInJsonFile(collection, reCryptedObjects);
-                    if (!updateResult) {
-                        throw new JsonDBException(
-                                "Failed to write re-crypted collection data to .json files, database might have become insconsistent");
                     }
                     collection.putAll(reCryptedObjects);
                 }

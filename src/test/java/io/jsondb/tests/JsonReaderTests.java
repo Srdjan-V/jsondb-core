@@ -71,10 +71,10 @@ public class JsonReaderTests {
         JsonDBConfig dbConfig = new JsonDBConfig(
                 dbFilesLocation, "io.jsondb.tests.model", null, false, new DefaultSchemaVersionComparator());
 
-        JsonReader jr = new JsonReader(dbConfig, instancesJson);
-
-        assertNotNull(jr);
-        assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
+        try (JsonReader jr = new JsonReader(dbConfig, instancesJson)) {
+            assertNotNull(jr);
+            assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
+        }
     }
 
     @Test
@@ -100,8 +100,7 @@ public class JsonReaderTests {
         JsonDBConfig dbConfig = new JsonDBConfig(
                 dbFilesLocation, "io.jsondb.tests.model", null, false, new DefaultSchemaVersionComparator());
 
-        @SuppressWarnings("unused")
-        JsonReader jr = new JsonReader(dbConfig, instancesJson);
-        raf.close();
+        try (@SuppressWarnings("unused")
+                JsonReader jr = new JsonReader(dbConfig, instancesJson)) {}
     }
 }

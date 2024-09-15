@@ -21,12 +21,14 @@
 package io.jsondb.io;
 
 import java.io.IOException;
+import java.io.Serial;
 
 /**
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
  */
 public class JsonFileLockException extends IOException {
+    @Serial
     private static final long serialVersionUID = -8387556796643594285L;
 
     public JsonFileLockException(String message, Throwable cause) {

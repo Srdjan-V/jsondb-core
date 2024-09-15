@@ -42,20 +42,20 @@ import org.slf4j.LoggerFactory;
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
  */
-public class JsonReader {
+public class JsonReader implements AutoCloseable {
 
     private Logger logger = LoggerFactory.getLogger(JsonReader.class);
 
-    private File collectionFile;
+    private final File collectionFile;
 
-    private RandomAccessFile raf;
-    private FileInputStream fis;
-    private FileChannel channel;
-    private InputStreamReader isr;
-    private BufferedReader reader;
-    private FileLock lock;
-    private File lockFilesLocation;
-    private File fileLockLocation;
+    private final RandomAccessFile raf;
+    private final FileInputStream fis;
+    private final FileChannel channel;
+    private final InputStreamReader isr;
+    private final BufferedReader reader;
+    private final FileLock lock;
+    private final File lockFilesLocation;
+    private final File fileLockLocation;
 
     public JsonReader(JsonDBConfig dbConfig, File collectionFile) throws IOException {
         this.collectionFile = collectionFile;
@@ -103,6 +103,7 @@ public class JsonReader {
         return reader.readLine();
     }
 
+    @Override
     public void close() {
         try {
             reader.close();

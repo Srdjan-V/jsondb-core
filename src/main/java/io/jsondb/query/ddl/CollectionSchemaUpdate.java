@@ -36,10 +36,10 @@ public class CollectionSchemaUpdate {
         DELETE
     };
 
-    private Map<String, IOperation> collectionUpdateData;
+    private final Map<String, IOperation> collectionUpdateData;
 
     public CollectionSchemaUpdate() {
-        collectionUpdateData = new TreeMap<String, IOperation>();
+        collectionUpdateData = new TreeMap<>();
     }
 
     /**

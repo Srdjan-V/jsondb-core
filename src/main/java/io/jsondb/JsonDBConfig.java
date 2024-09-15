@@ -22,21 +22,21 @@ package io.jsondb;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import io.jsondb.crypto.ICipher;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Comparator;
 
 /**
  * A POJO that has settings for the functioning of DB.
+ *
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
  */
 public class JsonDBConfig {
+
     // Settings
     private Charset charset;
     private String dbFilesLocationString;
@@ -48,7 +48,7 @@ public class JsonDBConfig {
 
     // References
     private ObjectMapper objectMapper;
-    private Comparator<String> schemaComparator;
+    private final Comparator<String> schemaComparator;
 
     public JsonDBConfig(
             String dbFilesLocationString,
@@ -57,7 +57,7 @@ public class JsonDBConfig {
             boolean compatibilityMode,
             Comparator<String> schemaComparator) {
 
-        this.charset = Charset.forName("UTF-8");
+        this.charset = StandardCharsets.UTF_8;
         this.dbFilesLocationString = dbFilesLocationString;
         this.dbFilesLocation = new File(dbFilesLocationString);
         this.dbFilesPath = dbFilesLocation.toPath();
@@ -65,10 +65,7 @@ public class JsonDBConfig {
         this.cipher = cipher;
 
         this.compatibilityMode = compatibilityMode;
-        this.objectMapper = new ObjectMapper()
-                .registerModule(new ParameterNamesModule())
-                .registerModule(new Jdk8Module())
-                .registerModule(new JavaTimeModule());
+        this.objectMapper = ObjectMapperProvider.defaultMapper();
 
         if (compatibilityMode) {
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

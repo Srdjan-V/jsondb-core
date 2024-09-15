@@ -31,8 +31,8 @@ import io.jsondb.query.ddl.CollectionSchemaUpdate.Type;
  * @version 1.0 21 Aug 2016
  */
 public class AddOperation extends AbstractOperation {
-    private Object defaultValue;
-    private boolean isSecret;
+    private final Object defaultValue;
+    private final boolean isSecret;
 
     public AddOperation(Object defaultValue, boolean isSecret) {
         this.operationType = Type.ADD;

@@ -29,10 +29,10 @@ import java.util.TreeMap;
  */
 public class Update {
 
-    private Map<String, Object> updateData;
+    private final Map<String, Object> updateData;
 
     public Update() {
-        updateData = new TreeMap<String, Object>();
+        updateData = new TreeMap<>();
     }
 
     /**
